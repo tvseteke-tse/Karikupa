@@ -56,7 +56,7 @@
 </div>
 
 <div class="header-panel">
-    <input type="text" id="tournamentTitle" value="Karácsony kupa 2027. - Egyéni Verseny" placeholder="Verseny / Kategória Megnevezése" oninput="sendData()">
+    <input type="text" id="tournamentTitle" value="Karácsony kupa 2027. - Férfi Egyéni" placeholder="Verseny / Kategória Megnevezése" oninput="sendData()">
     <div class="btn-group">
         <button class="btn btn-add" onclick="addPlayer()">+ Új játékos hozzáadása</button>
         <button class="btn btn-danger" onclick="removeLastPlayer()">Legutolsó játékos törlése</button>
@@ -85,16 +85,50 @@ let categoriesData = {
     kat1: { title: "Karácsony kupa 2027. - Férfi Egyéni", players: [] }
 };
 
-// Firebase adatok betöltése
+// --- BÖNGÉSZŐ MENTÉS (LOCALSTORAGE) KEZELÉSE ---
+function saveToLocalStorage() {
+    const localPayload = {
+        activeCatId: activeCatId,
+        categories: categories,
+        categoriesData: categoriesData
+    };
+    localStorage.setItem('karakupa_admin_draft', JSON.stringify(localPayload));
+}
+
+function loadFromLocalStorage() {
+    const saved = localStorage.getItem('karakupa_admin_draft');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            if (parsed.categories && parsed.categoriesData) {
+                categories = parsed.categories;
+                categoriesData = parsed.categoriesData;
+                activeCatId = parsed.activeCatId || categories[0].id;
+                renderCategoryTabs();
+                loadCategoryUI();
+            }
+        } catch (e) {
+            console.error("Hiba a helyi adatok betöltésekor", e);
+        }
+    }
+}
+
+// 1. Először azonnal betöltjük a helyi mentést (ha van)
+loadFromLocalStorage();
+
+// 2. Majd szinkronizálunk a Firebase adatbázissal
 db.ref('karikupa_egyeni').once('value', (snapshot) => {
     const data = snapshot.val();
     if (data && data.categories && data.data) {
         categories = data.categories;
         categoriesData = data.data;
-        if (categories.length > 0) activeCatId = categories[0].id;
+        if (categories.length > 0 && !categories.find(c => c.id === activeCatId)) {
+            activeCatId = categories[0].id;
+        }
+        renderCategoryTabs();
+        loadCategoryUI();
+        saveToLocalStorage();
     }
-    renderCategoryTabs();
-    loadCategoryUI();
 });
 
 function renderCategoryTabs() {
@@ -147,6 +181,7 @@ function switchCategory(catId) {
     activeCatId = catId;
     renderCategoryTabs();
     loadCategoryUI();
+    saveToLocalStorage();
 }
 
 function loadCategoryUI() {
@@ -237,7 +272,6 @@ function sendData() {
         });
     });
 
-    // Frissítjük a kategória nevét is a füleknél, ha átnevezték a címet
     const currentCatObj = categories.find(c => c.id === activeCatId);
     if (currentCatObj && title) {
         currentCatObj.name = title.replace('Karácsony kupa 2027. - ', '');
@@ -246,6 +280,10 @@ function sendData() {
 
     categoriesData[activeCatId] = { title: title, players: players };
 
+    // Mentés böngészőbe
+    saveToLocalStorage();
+
+    // Mentés Firebase-be
     db.ref('karikupa_egyeni').set({
         categories: categories,
         data: categoriesData
