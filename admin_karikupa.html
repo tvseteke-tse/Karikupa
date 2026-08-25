@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Karácsony Kupa 2027 - Adminisztráció</title>
+<title>Karácsony kupa 2027. - Adminisztráció</title>
 <style>
     body { font-family: sans-serif; background: #121212; color: white; padding: 15px; margin: 0; }
     
@@ -56,7 +56,7 @@
 </div>
 
 <div class="header-panel">
-    <input type="text" id="tournamentTitle" value="Kári Kupa - Egyéni Verseny" placeholder="Verseny / Kategória Megnevezése" oninput="sendData()">
+    <input type="text" id="tournamentTitle" value="Karácsony kupa 2027. - Egyéni Verseny" placeholder="Verseny / Kategória Megnevezése" oninput="sendData()">
     <div class="btn-group">
         <button class="btn btn-add" onclick="addPlayer()">+ Új játékos hozzáadása</button>
         <button class="btn btn-danger" onclick="removeLastPlayer()">Legutolsó játékos törlése</button>
@@ -82,7 +82,7 @@ let categories = [
     { id: 'kat1', name: 'Férfi Egyéni' }
 ];
 let categoriesData = {
-    kat1: { title: "Karácsony Kupa 2027 - Férfi Egyéni", players: [] }
+    kat1: { title: "Karácsony kupa 2027. - Férfi Egyéni", players: [] }
 };
 
 // Firebase adatok betöltése
@@ -116,7 +116,7 @@ function addNewCategory() {
     const newId = 'kat_' + Date.now();
     categories.push({ id: newId, name: catName.trim() });
     categoriesData[newId] = {
-        title: `Kári Kupa - ${catName.trim()}`,
+        title: `Karácsony kupa 2027. - ${catName.trim()}`,
         players: []
     };
 
@@ -240,7 +240,7 @@ function sendData() {
     // Frissítjük a kategória nevét is a füleknél, ha átnevezték a címet
     const currentCatObj = categories.find(c => c.id === activeCatId);
     if (currentCatObj && title) {
-        currentCatObj.name = title.replace('Kári Kupa - ', '');
+        currentCatObj.name = title.replace('Karácsony kupa 2027. - ', '');
         renderCategoryTabs();
     }
 
