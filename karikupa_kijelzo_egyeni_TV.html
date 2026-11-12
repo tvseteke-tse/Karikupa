@@ -1,324 +1,392 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karácsony kupa 2026. - Élő Ranglista</title>
-    <!-- Tailwind CSS betöltése -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Betűtípusok: Inter a szövegekhez, JetBrains Mono az eredménytábla számaihoz -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<title>Karácsony kupa 2027. - Élő Ranglista</title>
+<style>
+    * { box-sizing: border-box; }
+    html, body {
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+        background-color: #00122e;
+        color: #ffff00;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        overflow: hidden;
+        user-select: none;
+    }
+
+    .board-container {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: #001c47;
+        padding: 10px 15px;
+        box-shadow: inset 0 0 25px rgba(0, 50, 150, 0.6);
+    }
+
+    /* Fejléc */
+    header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #0044aa;
+        flex-shrink: 0;
+        min-height: 50px;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 220px;
+    }
+
+    .connection-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.9rem;
+        color: #8b949e;
+        font-weight: bold;
+    }
+
+    .status-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #ff3333;
+        box-shadow: 0 0 8px #ff3333;
+        display: inline-block;
+    }
+    .status-dot.connected {
+        background-color: #00ff66;
+        box-shadow: 0 0 8px #00ff66;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+    }
+
+    .fullscreen-btn {
+        background: #002b66;
+        color: #ffffff;
+        border: 1px solid #0044aa;
+        padding: 4px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    .fullscreen-btn:hover { background: #0055ff; color: #ffff00; }
+
+    h1 {
+        margin: 0;
+        font-size: 1.8rem;
+        color: #ffff00;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        text-align: center;
+        flex-grow: 1;
+        text-shadow: 0 0 10px rgba(255, 255, 0, 0.4);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 0 15px;
+    }
+
+    .header-right {
+        min-width: 220px;
+        text-align: right;
+        font-size: 1.4rem;
+        font-weight: bold;
+        color: #ffffff;
+        font-family: 'Courier New', Courier, monospace;
+    }
+
+    /* Többoszlopos tartalom */
+    .content-area {
+        flex-grow: 1;
+        display: flex;
+        overflow: hidden;
+        padding-top: 8px;
+    }
+
+    .columns-wrapper {
+        display: grid;
+        width: 100%;
+        height: 100%;
+        gap: 12px;
+    }
+
+    .column-panel {
+        background: rgba(0, 28, 71, 0.7);
+        border: 1px solid #0044aa;
+        border-radius: 6px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: 'Courier New', Courier, monospace;
+        table-layout: fixed;
+    }
+
+    th {
+        color: #ffff00;
+        background: #002255;
+        border-bottom: 2px solid #0044aa;
+        padding: var(--header-padding, 6px) 2px;
+        font-size: var(--header-font-size, 0.9rem);
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    td {
+        padding: var(--row-padding-y, 4px) 2px;
+        text-align: center;
+        border-bottom: 1px solid #002b66;
+        font-size: var(--row-font-size, 1rem);
+        font-weight: bold;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Oszloparányok (colgroup) */
+    .col-rank { width: 5.5%; }
+    .col-name { width: 25%; text-align: left; font-family: sans-serif; color: #ffff00; }
+    .col-team { width: 29%; text-align: left; font-family: sans-serif; color: #00ff66; }
+    .col-total { width: 12%; font-weight: bold; }
+    .col-teli { width: 9.5%; color: #8b949e; }
+    .col-tarol { width: 9.5%; color: #8b949e; }
+    .col-ures { width: 9.5%; color: #8b949e; }
+
+    .rank-col { color: #ffffff; text-align: center; }
     
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    .color-green { color: #00ff66 !important; text-shadow: 0 0 4px rgba(0, 255, 102, 0.4); }
+    .color-yellow { color: #ffff00 !important; text-shadow: 0 0 4px rgba(255, 255, 0, 0.4); }
+    .color-red { color: #ff3333 !important; text-shadow: 0 0 4px rgba(255, 51, 51, 0.4); }
 
-    <style>
-        :root {
-            --row-font-size: 16px;
-            --header-font-size: 13px;
-            --total-font-size: 19px;
-            --row-padding-y: 5px;
-        }
+    tr.top3 { background-color: rgba(0, 68, 170, 0.4); }
+    tr.top3 .rank-col { color: #ffff00; }
+</style>
 
-        html, body {
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background-color: #00122e;
-            background-image: radial-gradient(circle at 50% 0%, #002b66 0%, #00122e 75%);
-            color: #ffff00;
-            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-            user-select: none;
-        }
-
-        .font-mono-score {
-            font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
-            font-variant-numeric: tabular-nums;
-        }
-
-        /* Eredeti színkódolás LED ragyogással */
-        .color-green {
-            color: #00ff66 !important;
-            text-shadow: 0 0 8px rgba(0, 255, 102, 0.45);
-        }
-        .color-yellow {
-            color: #ffff00 !important;
-            text-shadow: 0 0 8px rgba(255, 255, 0, 0.45);
-        }
-        .color-red {
-            color: #ff3333 !important;
-            text-shadow: 0 0 8px rgba(255, 51, 51, 0.45);
-        }
-
-        /* Dinamikus táblázat cella méretezések */
-        .dyn-th {
-            font-size: var(--header-font-size);
-            padding-top: calc(var(--row-padding-y) + 2px);
-            padding-bottom: calc(var(--row-padding-y) + 2px);
-            line-height: 1.15;
-        }
-
-        .dyn-td {
-            font-size: var(--row-font-size);
-            padding-top: var(--row-padding-y);
-            padding-bottom: var(--row-padding-y);
-            line-height: 1.15;
-        }
-
-        .dyn-total {
-            font-size: var(--total-font-size);
-            padding-top: var(--row-padding-y);
-            padding-bottom: var(--row-padding-y);
-            line-height: 1.1;
-        }
-
-        /* Kiemelt dobogós sorok */
-        tr.top3 {
-            background: linear-gradient(90deg, rgba(0, 85, 255, 0.38) 0%, rgba(0, 68, 170, 0.5) 50%, rgba(0, 85, 255, 0.38) 100%);
-        }
-        tr.top3 td {
-            border-bottom-color: rgba(255, 255, 0, 0.28);
-        }
-
-        /* Pulzáló élő státusz pont */
-        @keyframes pulse-live {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.35); opacity: 0.55; }
-        }
-        .live-dot {
-            animation: pulse-live 1.8s infinite ease-in-out;
-        }
-    </style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
-<body class="p-2 sm:p-3 flex flex-col box-border">
+<body>
 
-    <!-- Fő kijelző keret (100% magasság, görgetés nélkül) -->
-    <div class="w-full h-full bg-[#001c47]/95 border-2 border-[#0044aa] rounded-2xl p-2.5 sm:p-3.5 shadow-[0_0_35px_rgba(0,50,150,0.65)] flex flex-col overflow-hidden">
-        
-        <!-- Felső információs és vezérlősáv -->
-        <div id="topBar" class="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-[#0044aa]/70 shrink-0">
-            <!-- Bal oldal: Élő kapcsolat + Főcím + Indulók száma -->
-            <div class="flex items-center gap-3 min-w-0">
-                <div class="flex items-center gap-2 bg-[#00122e]/90 border border-[#0044aa] px-2.5 py-1 rounded-xl shrink-0">
-                    <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-yellow-400 live-dot inline-block shadow-[0_0_8px_#ffff00]"></span>
-                    <span id="statusText" class="text-[11px] sm:text-xs font-bold tracking-wider uppercase text-yellow-300">CSATLAKOZÁS...</span>
-                </div>
-
-                <div class="min-w-0">
-                    <h1 id="boardTitle" class="text-base sm:text-xl lg:text-2xl font-black text-[#ffff00] tracking-wider uppercase truncate drop-shadow-[0_0_10px_rgba(255,255,0,0.4)]">
-                        KARÁCSONY KUPA 2027.
-                    </h1>
-                </div>
+<div class="board-container">
+    <header>
+        <div class="header-left">
+            <div class="connection-status">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Kapcsolódás...</span>
             </div>
-
-            <!-- Közép: Kategória választó fülek -->
-            <div id="tabsContainer" class="flex flex-wrap gap-1.5 justify-center"></div>
-
-            <!-- Jobb oldal: Kivetítő vezérlőgombok + Óra -->
-            <div class="flex items-center gap-1.5 shrink-0">
-                <button id="demoToggleBtn" onclick="toggleDemoMode()" class="hidden bg-[#002b66] hover:bg-[#003d8f] text-yellow-300 border border-[#0055ff] px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer">
-                    Minta: KI
-                </button>
-
-                <button id="autoCycleBtn" onclick="toggleAutoCycle()" title="Kategóriák automatikus léptetése 15 másodpercenként" class="bg-[#002b66] hover:bg-[#003d8f] text-white border border-[#0044aa] px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer">
-                    <svg class="w-3.5 h-3.5 text-[#00ff66]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                    </svg>
-                    <span id="autoCycleLabel">Auto: KI</span>
-                </button>
-
-                <button onclick="toggleFullscreen()" title="Teljes képernyős mód" class="bg-[#002b66] hover:bg-[#003d8f] text-white border border-[#0044aa] px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer">
-                    <svg class="w-3.5 h-3.5 text-[#ffff00]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
-                    </svg>
-                    <span class="hidden md:inline">Teljes képernyő</span>
-                </button>
-
-                <div id="liveClock" class="font-mono-score bg-[#00122e] border border-[#0044aa] text-[#00ff66] px-2.5 py-1 rounded-xl text-xs sm:text-sm font-extrabold tracking-wider">
-                    00:00:00
-                </div>
-            </div>
+            <button class="fullscreen-btn" onclick="toggleFullScreen()">Teljes képernyő</button>
         </div>
+        <h1 id="boardTitle">KARÁCSONY KUPA 2027.</h1>
+        <div class="header-right" id="clockDisplay">00:00</div>
+    </header>
 
-        <!-- Mintaadat figyelmeztető sáv -->
-        <div id="demoBanner" class="hidden mb-2 bg-[#002b66] border border-[#ffff00]/60 text-yellow-200 px-3 py-1 rounded-xl text-xs flex items-center justify-between gap-2 shrink-0">
-            <span><strong>Előnézeti mód:</strong> Mintaadatok láthatók, mert a Firebase adatbázis még üres. Élő adat érkezésekor a kijelző azonnal átvált.</span>
-            <button onclick="toggleDemoMode()" class="underline font-bold text-[#ffff00] whitespace-nowrap cursor-pointer">Elrejtés</button>
-        </div>
-
-        <!-- Többoszlopos eredménytábla terület (maradék hely 100%-át kitölti, görgetés nélkül) -->
-        <div id="columnsWrapper" class="flex-1 min-h-0 w-full grid gap-2.5 overflow-hidden">
-            <!-- Dinamikusan generált oszlopok / táblázatok -->
-        </div>
-
-        <!-- Kompakt lábléc -->
-        <div id="bottomBar" class="mt-2 pt-1.5 border-t border-[#0044aa]/60 flex flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs text-blue-200/80 shrink-0">
-            <div class="flex flex-wrap items-center gap-3">
-                <span id="playerCountSubtitle" class="font-bold text-white">Várakozás az eredményekre...</span>
-                <span class="hidden sm:inline text-blue-500">|</span>
-                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#00ff66] inline-block"></span> Össz &gt; 600 / Üres = 0</span>
-                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#ffff00] inline-block"></span> Össz 500–600 / Üres 1–5</span>
-                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#ff3333] inline-block"></span> Össz &lt; 500 / Üres &gt; 5</span>
-            </div>
-            <div class="flex items-center gap-3">
-                <span id="layoutInfoText" class="font-mono-score text-blue-300/70"></span>
-                <span id="lastUpdateText" class="font-mono-score text-blue-300/80">Utolsó frissítés: -</span>
-            </div>
-        </div>
+    <div class="content-area" id="contentArea">
+        <div class="columns-wrapper" id="columnsWrapper"></div>
     </div>
+</div>
 
-    <script>
-        // Firebase konfiguráció
-        const firebaseConfig = {
-            apiKey: "aizasyd8o7xyctxtjlqcm8z-29xtbopbxrybjom",
-            authDomain: "teke-eredmenyek.firebaseapp.com",
-            databaseURL: "https://teke-eredmenyek-default-rtdb.firebaseio.com",
-            projectId: "teke-eredmenyek",
-            storageBucket: "teke-eredmenyek.appspot.com"
-        };
+<script>
+const firebaseConfig = {
+    apiKey: "aizasyd8o7xyctxtjlqcm8z-29xtbopbxrybjom",
+    authDomain: "teke-eredmenyek.firebaseapp.com",
+    databaseURL: "https://teke-eredmenyek-default-rtdb.firebaseio.com",
+    projectId: "teke-eredmenyek",
+    storageBucket: "teke-eredmenyek.appspot.com"
+};
 
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-        let activeCatId = '';
-        let categories = [];
-        let categoriesData = {};
-        let hasLiveData = false;
-        let isDemoMode = false;
-        let autoCycleInterval = null;
+let categories = [];
+let categoriesData = {};
+let activeCatIndex = 0;
+let autoRotateTimer = null;
+let isConnected = false;
+let fallbackTimer = null;
 
-        // Előnézeti mintaadatok (ha még nincs élő adat az adatbázisban)
-        const DEMO_CATEGORIES = [
-            { id: 'ferfi_igazolt', name: 'Férfi Igazolt' },
-            { id: 'noi_igazolt', name: 'Női Igazolt' },
-            { id: 'amator', name: 'Amatőr Kategória' }
-        ];
+// Óra frissítés (másodpercek nélkül)
+function updateClock() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('clockDisplay').innerText = `${hours}:${minutes}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
 
-        function generateDemoPlayers(count, baseScore) {
-            const firstNames = ['Kovács', 'Nagy', 'Szabó', 'Tóth', 'Horváth', 'Varga', 'Kiss', 'Molnár', 'Németh', 'Farkas', 'Balogh', 'Papp', 'Takács', 'Juhász', 'Lakatos', 'Mészáros', 'Oláh', 'Simon', 'Rácz', 'Fekete'];
-            const lastNames = ['János', 'Péter', 'Gábor', 'László', 'Zoltán', 'István', 'Tamás', 'Attila', 'Sándor', 'József', 'Ferenc', 'Tibor', 'Zsolt', 'Csaba', 'András', 'Imre', 'Lajos', 'Gyula', 'Róbert', 'Balázs'];
-            const teams = ['Tiszakécske VSE', 'Szolnoki MÁV', 'Kecskeméti TC', 'Ceglédi VSE', 'Bácsalmási PVSE', 'Ferencvárosi TC', 'Zalaegerszegi TE', 'Szegedi TE', 'Répcelaki SE', 'Kaposvári TK'];
-            const list = [];
-            for (let i = 0; i < count; i++) {
-                const total = Math.max(430, baseScore - i * 4 - (i % 3));
-                const tarol = Math.round(total * 0.34);
-                const teli = total - tarol;
-                const ures = total > 600 ? 0 : (total >= 500 ? (i % 5) + 1 : 6 + (i % 4));
-                list.push({
-                    name: `${firstNames[i % firstNames.length]} ${lastNames[(i * 3) % lastNames.length]}`,
-                    team: teams[i % teams.length],
-                    teli,
-                    tarol,
-                    ures,
-                    total
-                });
-            }
-            return list;
-        }
-
-        const DEMO_DATA = {
-            ferfi_igazolt: {
-                title: 'KARÁCSONY KUPA 2027. - FÉRFI IGAZOLT',
-                players: generateDemoPlayers(38, 636)
-            },
-            noi_igazolt: {
-                title: 'KARÁCSONY KUPA 2027. - NŐI IGAZOLT',
-                players: generateDemoPlayers(22, 618)
-            },
-            amator: {
-                title: 'KARÁCSONY KUPA 2027. - AMATŐR',
-                players: generateDemoPlayers(44, 592)
-            }
-        };
-
-        // Élő óra
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('liveClock').innerText = now.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
-
-        // Firebase kapcsolat figyelése
-        db.ref('.info/connected').on('value', (snap) => {
-            const connected = snap.val() === true;
-            const dot = document.getElementById('statusDot');
-            const text = document.getElementById('statusText');
-
-            if (connected) {
-                dot.className = 'w-2.5 h-2.5 rounded-full bg-[#00ff66] live-dot inline-block shadow-[0_0_8px_#00ff66]';
-                text.className = 'text-[11px] sm:text-xs font-bold tracking-wider uppercase text-[#00ff66]';
-                text.innerText = 'ÉLŐ KAPCSOLAT';
-            } else {
-                dot.className = 'w-2.5 h-2.5 rounded-full bg-[#ff3333] inline-block shadow-[0_0_8px_#ff3333]';
-                text.className = 'text-[11px] sm:text-xs font-bold tracking-wider uppercase text-[#ff3333]';
-                text.innerText = 'OFFLINE...';
-            }
+// Teljes képernyő váltó
+function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+            console.error("Hiba történt a teljes képernyőre váltáskor:", err);
         });
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
+}
 
-        // Firebase 'karikupa_egyeni' adatfolyam figyelése
-        db.ref('karikupa_egyeni').on('value', (snapshot) => {
-            const val = snapshot.val();
-            const nowStr = new Date().toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            document.getElementById('lastUpdateText').innerText = `Utolsó frissítés: ${nowStr}`;
+// Firebase kapcsolat figyelése
+db.ref('.info/connected').on('value', (snap) => {
+    isConnected = (snap.val() === true);
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    if (isConnected) {
+        dot.className = 'status-dot connected';
+        txt.innerText = 'Élő';
+    } else {
+        dot.className = 'status-dot';
+        txt.innerText = 'Kapcsolódás...';
+    }
+});
 
-            if (val && (val.categories || val.data)) {
-                hasLiveData = true;
-                isDemoMode = false;
-                document.getElementById('demoBanner').classList.add('hidden');
-                document.getElementById('demoToggleBtn').classList.add('hidden');
+// Adatok betöltése Firebase-ből
+db.ref('karikupa_egyeni').on('value', (snapshot) => {
+    const val = snapshot.val();
+    if (val) {
+        if (fallbackTimer) clearTimeout(fallbackTimer);
+        categories = val.categories || [];
+        categoriesData = val.data || {};
+        if (activeCatIndex >= categories.length) {
+            activeCatIndex = 0;
+        }
+        renderCurrentCategory();
+    }
+}, (error) => {
+    console.error("Firebase olvasási hiba:", error);
+});
 
-                categories = val.categories || [];
-                categoriesData = val.data || {};
+// 2.5mp után ha nincs adat, mintaadatok betöltése előnézethez
+fallbackTimer = setTimeout(() => {
+    if (categories.length === 0) {
+        loadMockData();
+    }
+}, 2500);
 
-                if (categories.length > 0) {
-                    if (!activeCatId || !categories.find(c => c.id === activeCatId)) {
-                        activeCatId = categories[0].id;
-                    }
-                }
-                renderCategoryTabs();
-                renderCurrentCategory();
-            } else if (!hasLiveData) {
-                document.getElementById('demoToggleBtn').classList.remove('hidden');
-                renderCurrentCategory();
-            }
-        });
+function loadMockData() {
+    categories = [
+        { id: 'cat1', name: 'Felnőtt Férfi' },
+        { id: 'cat2', name: 'Felnőtt Női' }
+    ];
+    categoriesData = {
+        'cat1': {
+            title: 'Felnőtt Férfi Egyéni',
+            players: Array.from({length: 32}, (_, i) => ({
+                name: i === 0 ? 'Kecskeméti Szebasztián' : `Versenyző ${i+1}`,
+                team: 'Tiszakécske TSE',
+                total: Math.max(450, 630 - (i * 4)),
+                teli: 380,
+                tarol: Math.max(150, 250 - i),
+                ures: i % 5
+            }))
+        },
+        'cat2': {
+            title: 'Felnőtt Női Egyéni',
+            players: Array.from({length: 24}, (_, i) => ({
+                name: i === 0 ? 'Goórné Fodor Eszter' : `Játékos ${i+1}`,
+                team: 'Szolnoki MÁV',
+                total: Math.max(420, 580 - (i * 5)),
+                teli: 350,
+                tarol: Math.max(120, 230 - i),
+                ures: (i + 2) % 6
+            }))
+        }
+    };
+    renderCurrentCategory();
+}
 
-        // 2,5 másodperc után előnézeti mód, ha még nincs élő adat
-        setTimeout(() => {
-            if (!hasLiveData && categories.length === 0) {
-                enableDemoMode();
-            }
-        }, 2500);
-
-        function enableDemoMode() {
-            if (hasLiveData) return;
-            isDemoMode = true;
-            categories = DEMO_CATEGORIES;
-            categoriesData = DEMO_DATA;
-            activeCatId = categories[0].id;
-            document.getElementById('demoBanner').classList.remove('hidden');
-            const btn = document.getElementById('demoToggleBtn');
-            btn.classList.remove('hidden');
-            btn.innerText = 'Minta: BE';
-            renderCategoryTabs();
+// 60 másodperces automatikus lapváltás
+function startAutoRotate() {
+    if (autoRotateTimer) clearInterval(autoRotateTimer);
+    autoRotateTimer = setInterval(() => {
+        if (categories.length > 1) {
+            activeCatIndex = (activeCatIndex + 1) % categories.length;
             renderCurrentCategory();
         }
+    }, 60000);
+}
+startAutoRotate();
 
-        function toggleDemoMode() {
-            if (hasLiveData) return;
-            isDemoMode = !isDemoMode;
-            const btn = document.getElementById('demoToggleBtn');
-            if (isDemoMode) {
-                categories = DEMO_CATEGORIES;
-                categoriesData = DEMO_DATA;
-                activeCatId = categories[0].id;
-                document.getElementById('demoBanner').
+function getTotalColorClass(val) {
+    if (val === 0) return '';
+    if (val > 600) return 'color-green';
+    if (val < 500) return 'color-red';
+    return 'color-yellow';
+}
+
+function getUresColorClass(val) {
+    if (val === 0) return 'color-green';
+    if (val <= 5) return 'color-yellow';
+    return 'color-red';
+}
+
+// Fő renderelő és dinamikus méretező motor
+function renderCurrentCategory() {
+    if (categories.length === 0) return;
+    const catMeta = categories[activeCatIndex];
+    const catData = categoriesData[catMeta.id] || { title: catMeta.name, players: [] };
+    
+    document.getElementById('boardTitle').innerText = (catData.title || catMeta.name).toUpperCase();
+
+    const players = catData.players || [];
+    const sorted = [...players].sort((a, b) => {
+        if (b.total !== a.total) return b.total - a.total;
+        if (b.tarol !== a.tarol) return b.tarol - a.tarol;
+        if (a.ures !== b.ures) return a.ures - b.ures;
+        return 0;
+    });
+
+    const totalCount = sorted.length;
+    const contentArea = document.getElementById('contentArea');
+    const availableWidth = contentArea.clientWidth - 30;
+    const availableHeight = contentArea.clientHeight - 10;
+
+    // Oszlopszám és betűméret kiszámítása a tökéletes görgetésmentes megjelenítéshez
+    let bestCols = 1;
+    let bestFontSize = 15;
+    let bestPaddingY = 5;
+    let bestHeaderFontSize = 13;
+    let bestHeaderPadding = 6;
+
+    for (let cols = 1; cols <= 4; cols++) {
+        const rowsPerCol = Math.ceil(totalCount / cols);
+        const colWidth = availableWidth / cols;
+        if (cols > 1 && colWidth < 300) continue;
+
+        for (let fs = 20; fs >= 10; fs -= 0.5) {
+            const py = Math.max(2, fs * 0.32);
+            const hfs = Math.max(10, fs * 0.85);
+            const hpy = Math.max(3, py * 0.8);
+            const rowHeight = (fs * 1.4) + (py * 2) + 1; // 1px border
+            const headerHeight = hfs + (hpy * 2) + 4;
+            const totalPanelHeight = headerHeight + (rowsPerCol * rowHeight);
+
+            if (totalPanelHeight <= availableHeight && colWidth >= 280) {
+                if (fs > bestFontSize || cols > bestCols) {
+                    bestCols = cols;
+                    bestFontSize = fs;
+                    bestPaddingY = py;
+                    bestHeaderFontSize = hfs;
+                    bestHeaderPadding = hpy;
+                }
