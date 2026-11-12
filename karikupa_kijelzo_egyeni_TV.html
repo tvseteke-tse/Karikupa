@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karácsony kupa 2027. - Élő Ranglista</title>
+    <title>Karácsony kupa 2026. - Élő Ranglista</title>
     <!-- Tailwind CSS betöltése -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Betűtípusok: Inter a szövegekhez, JetBrains Mono az eredménytábla számaihoz -->
@@ -11,20 +11,32 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Firebase SDK (eredeti verzió megtartása) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <style>
-        /* Eredményjelző egyedi színvilág és tipográfia */
+        :root {
+            --row-font-size: 16px;
+            --header-font-size: 13px;
+            --total-font-size: 19px;
+            --row-padding-y: 5px;
+        }
+
+        html, body {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             background-color: #00122e;
-            background-image: 
-                radial-gradient(circle at 50% 0%, #002b66 0%, #00122e 70%);
+            background-image: radial-gradient(circle at 50% 0%, #002b66 0%, #00122e 75%);
             color: #ffff00;
             font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
             user-select: none;
-            min-height: 100vh;
         }
 
         .font-mono-score {
@@ -32,7 +44,7 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* Eredeti színkódolás megtartása finom LED ragyogással */
+        /* Eredeti színkódolás LED ragyogással */
         .color-green {
             color: #00ff66 !important;
             text-shadow: 0 0 8px rgba(0, 255, 102, 0.45);
@@ -46,12 +58,34 @@
             text-shadow: 0 0 8px rgba(255, 51, 51, 0.45);
         }
 
+        /* Dinamikus táblázat cella méretezések */
+        .dyn-th {
+            font-size: var(--header-font-size);
+            padding-top: calc(var(--row-padding-y) + 2px);
+            padding-bottom: calc(var(--row-padding-y) + 2px);
+            line-height: 1.15;
+        }
+
+        .dyn-td {
+            font-size: var(--row-font-size);
+            padding-top: var(--row-padding-y);
+            padding-bottom: var(--row-padding-y);
+            line-height: 1.15;
+        }
+
+        .dyn-total {
+            font-size: var(--total-font-size);
+            padding-top: var(--row-padding-y);
+            padding-bottom: var(--row-padding-y);
+            line-height: 1.1;
+        }
+
         /* Kiemelt dobogós sorok */
         tr.top3 {
-            background: linear-gradient(90deg, rgba(0, 85, 255, 0.35) 0%, rgba(0, 68, 170, 0.45) 50%, rgba(0, 85, 255, 0.35) 100%);
+            background: linear-gradient(90deg, rgba(0, 85, 255, 0.38) 0%, rgba(0, 68, 170, 0.5) 50%, rgba(0, 85, 255, 0.38) 100%);
         }
         tr.top3 td {
-            border-bottom-color: rgba(255, 255, 0, 0.25);
+            border-bottom-color: rgba(255, 255, 0, 0.28);
         }
 
         /* Pulzáló élő státusz pont */
@@ -62,125 +96,87 @@
         .live-dot {
             animation: pulse-live 1.8s infinite ease-in-out;
         }
-
-        /* Egyedi görgetősáv kivetítőkhöz */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #00122e;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #0044aa;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #0055ff;
-        }
     </style>
 </head>
-<body class="p-2 sm:p-4 lg:p-6 flex flex-col">
+<body class="p-2 sm:p-3 flex flex-col box-border">
 
-    <!-- Fő kijelző keret -->
-    <div class="w-full max-w-[1440px] mx-auto bg-[#001c47]/95 border-[3px] border-[#0044aa] rounded-2xl p-3 sm:p-5 lg:p-6 shadow-[0_0_35px_rgba(0,50,150,0.65)] flex-1 flex flex-col">
+    <!-- Fő kijelző keret (100% magasság, görgetés nélkül) -->
+    <div class="w-full h-full bg-[#001c47]/95 border-2 border-[#0044aa] rounded-2xl p-2.5 sm:p-3.5 shadow-[0_0_35px_rgba(0,50,150,0.65)] flex flex-col overflow-hidden">
         
-        <!-- Felső információs és vezérlősáv (Kivetítő funkciók + Élő kapcsolat) -->
-        <div class="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-[#0044aa]/70">
-            <!-- Élő kapcsolat visszajelző -->
-            <div class="flex items-center gap-2.5 bg-[#00122e]/90 border border-[#0044aa] px-3.5 py-1.5 rounded-xl">
-                <span id="statusDot" class="w-3 h-3 rounded-full bg-yellow-400 live-dot inline-block shadow-[0_0_8px_#ffff00]"></span>
-                <span id="statusText" class="text-xs sm:text-sm font-bold tracking-wider uppercase text-yellow-300">CSATLAKOZÁS...</span>
+        <!-- Felső információs és vezérlősáv -->
+        <div id="topBar" class="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-[#0044aa]/70 shrink-0">
+            <!-- Bal oldal: Élő kapcsolat + Főcím + Indulók száma -->
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="flex items-center gap-2 bg-[#00122e]/90 border border-[#0044aa] px-2.5 py-1 rounded-xl shrink-0">
+                    <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-yellow-400 live-dot inline-block shadow-[0_0_8px_#ffff00]"></span>
+                    <span id="statusText" class="text-[11px] sm:text-xs font-bold tracking-wider uppercase text-yellow-300">CSATLAKOZÁS...</span>
+                </div>
+
+                <div class="min-w-0">
+                    <h1 id="boardTitle" class="text-base sm:text-xl lg:text-2xl font-black text-[#ffff00] tracking-wider uppercase truncate drop-shadow-[0_0_10px_rgba(255,255,0,0.4)]">
+                        KARÁCSONY KUPA 2027.
+                    </h1>
+                </div>
             </div>
 
-            <!-- Kivetítő vezérlőgombok -->
-            <div class="flex flex-wrap items-center gap-2">
-                <!-- Demo/Előnézet kapcsoló (ha még nincs élő adat) -->
-                <button id="demoToggleBtn" onclick="toggleDemoMode()" class="hidden bg-[#002b66] hover:bg-[#003d8f] text-yellow-300 border border-[#0055ff] px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer">
-                    Mintaadatok: KI
+            <!-- Közép: Kategória választó fülek -->
+            <div id="tabsContainer" class="flex flex-wrap gap-1.5 justify-center"></div>
+
+            <!-- Jobb oldal: Kivetítő vezérlőgombok + Óra -->
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button id="demoToggleBtn" onclick="toggleDemoMode()" class="hidden bg-[#002b66] hover:bg-[#003d8f] text-yellow-300 border border-[#0055ff] px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer">
+                    Minta: KI
                 </button>
 
-                <!-- Automatikus kategóriaváltás kivetítőre -->
-                <button id="autoCycleBtn" onclick="toggleAutoCycle()" title="Kategóriák automatikus léptetése 15 másodpercenként" class="bg-[#002b66] hover:bg-[#003d8f] text-white border border-[#0044aa] px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer">
-                    <svg class="w-4 h-4 text-[#00ff66]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button id="autoCycleBtn" onclick="toggleAutoCycle()" title="Kategóriák automatikus léptetése 15 másodpercenként" class="bg-[#002b66] hover:bg-[#003d8f] text-white border border-[#0044aa] px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                    <svg class="w-3.5 h-3.5 text-[#00ff66]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                     </svg>
-                    <span id="autoCycleLabel">Auto-váltás: KI</span>
+                    <span id="autoCycleLabel">Auto: KI</span>
                 </button>
 
-                <!-- Teljes képernyő gomb -->
-                <button onclick="toggleFullscreen()" title="Teljes képernyős mód" class="bg-[#002b66] hover:bg-[#003d8f] text-white border border-[#0044aa] px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer">
-                    <svg class="w-4 h-4 text-[#ffff00]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button onclick="toggleFullscreen()" title="Teljes képernyős mód" class="bg-[#002b66] hover:bg-[#003d8f] text-white border border-[#0044aa] px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                    <svg class="w-3.5 h-3.5 text-[#ffff00]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
                     </svg>
-                    <span class="hidden sm:inline">Teljes képernyő</span>
+                    <span class="hidden md:inline">Teljes képernyő</span>
                 </button>
 
-                <!-- Digitális óra -->
-                <div id="liveClock" class="font-mono-score bg-[#00122e] border border-[#0044aa] text-[#00ff66] px-3.5 py-1.5 rounded-xl text-sm sm:text-base font-extrabold tracking-wider">
+                <div id="liveClock" class="font-mono-score bg-[#00122e] border border-[#0044aa] text-[#00ff66] px-2.5 py-1 rounded-xl text-xs sm:text-sm font-extrabold tracking-wider">
                     00:00:00
                 </div>
             </div>
         </div>
 
-        <!-- Mintaadat figyelmeztető sáv (csak ha demo módban van) -->
-        <div id="demoBanner" class="hidden mb-4 bg-[#002b66] border border-[#ffff00]/60 text-yellow-200 px-4 py-2 rounded-xl text-xs sm:text-sm flex items-center justify-between gap-2">
-            <span><strong>Előnézeti mód:</strong> Jelenleg mintaadatok láthatók, mert a Firebase adatbázis még nem küldött versenysorokat. Amint élő adat érkezik, a kijelző automatikusan átvált.</span>
+        <!-- Mintaadat figyelmeztető sáv -->
+        <div id="demoBanner" class="hidden mb-2 bg-[#002b66] border border-[#ffff00]/60 text-yellow-200 px-3 py-1 rounded-xl text-xs flex items-center justify-between gap-2 shrink-0">
+            <span><strong>Előnézeti mód:</strong> Mintaadatok láthatók, mert a Firebase adatbázis még üres. Élő adat érkezésekor a kijelző azonnal átvált.</span>
             <button onclick="toggleDemoMode()" class="underline font-bold text-[#ffff00] whitespace-nowrap cursor-pointer">Elrejtés</button>
         </div>
 
-        <!-- Kategória választó fülek -->
-        <div id="tabsContainer" class="flex flex-wrap gap-2 justify-center mb-4"></div>
-
-        <!-- Főcím -->
-        <div class="text-center mb-4">
-            <h1 id="boardTitle" class="text-2xl sm:text-3xl lg:text-4xl font-black text-[#ffff00] tracking-widest uppercase drop-shadow-[0_0_12px_rgba(255,255,0,0.45)]">
-                KARÁCSONY KUPA 2027.
-            </h1>
-            <div id="playerCountSubtitle" class="text-xs sm:text-sm text-blue-200/80 font-semibold mt-1 tracking-wide">
-                Várakozás az eredményekre...
-            </div>
+        <!-- Többoszlopos eredménytábla terület (maradék hely 100%-át kitölti, görgetés nélkül) -->
+        <div id="columnsWrapper" class="flex-1 min-h-0 w-full grid gap-2.5 overflow-hidden">
+            <!-- Dinamikusan generált oszlopok / táblázatok -->
         </div>
 
-        <!-- Eredménytábla konténer -->
-        <div class="w-full overflow-x-auto rounded-xl border border-[#0044aa] bg-[#00122e]/60 flex-1">
-            <table class="w-full border-collapse text-left">
-                <thead>
-                    <tr class="bg-[#002b66] text-[#ffff00] border-b-2 border-[#0044aa] text-sm sm:text-base lg:text-lg uppercase tracking-wider">
-                        <th class="py-3 px-2 text-center w-14 sm:w-16 font-extrabold">#</th>
-                        <th class="py-3 px-3 text-left min-w-[160px] sm:min-w-[220px] font-extrabold">Név</th>
-                        <th class="py-3 px-3 text-left min-w-[140px] sm:min-w-[190px] font-extrabold">Csapat</th>
-                        <th class="py-3 px-2 text-center w-16 sm:w-20 font-extrabold">S1</th>
-                        <th class="py-3 px-2 text-center w-16 sm:w-20 font-extrabold">S2</th>
-                        <th class="py-3 px-2 text-center w-16 sm:w-20 font-extrabold">S3</th>
-                        <th class="py-3 px-2 text-center w-16 sm:w-20 font-extrabold">S4</th>
-                        <th class="py-3 px-2 text-center w-16 sm:w-20 font-extrabold">Teli</th>
-                        <th class="py-3 px-2 text-center w-16 sm:w-20 font-extrabold">Tarol</th>
-                        <th class="py-3 px-2 text-center w-16 sm:w-20 font-extrabold">Üres</th>
-                        <th class="py-3 px-3 text-center w-20 sm:w-24 font-black text-base sm:text-lg lg:text-xl">Össz.</th>
-                    </tr>
-                </thead>
-                <tbody id="boardBody" class="divide-y divide-[#002b66] text-base sm:text-lg lg:text-xl font-bold">
-                    <!-- Dinamikusan generált sorok -->
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Jelmagyarázat lábléc -->
-        <div class="mt-4 pt-3 border-t border-[#0044aa]/60 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-blue-200/80">
-            <div class="flex flex-wrap items-center gap-4">
-                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#00ff66] inline-block"></span> Szett &gt; 150 / Össz &gt; 600 / Üres = 0</span>
-                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#ffff00] inline-block"></span> Szett 120–150 / Össz 500–600 / Üres 1–5</span>
-                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#ff3333] inline-block"></span> Szett &lt; 120 / Össz &lt; 500 / Üres &gt; 5</span>
+        <!-- Kompakt lábléc -->
+        <div id="bottomBar" class="mt-2 pt-1.5 border-t border-[#0044aa]/60 flex flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs text-blue-200/80 shrink-0">
+            <div class="flex flex-wrap items-center gap-3">
+                <span id="playerCountSubtitle" class="font-bold text-white">Várakozás az eredményekre...</span>
+                <span class="hidden sm:inline text-blue-500">|</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#00ff66] inline-block"></span> Össz &gt; 600 / Üres = 0</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#ffff00] inline-block"></span> Össz 500–600 / Üres 1–5</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#ff3333] inline-block"></span> Össz &lt; 500 / Üres &gt; 5</span>
             </div>
-            <div id="lastUpdateText" class="font-mono-score text-xs text-blue-300/70">
-                Utolsó frissítés: -
+            <div class="flex items-center gap-3">
+                <span id="layoutInfoText" class="font-mono-score text-blue-300/70"></span>
+                <span id="lastUpdateText" class="font-mono-score text-blue-300/80">Utolsó frissítés: -</span>
             </div>
         </div>
     </div>
 
     <script>
-        // Eredeti Firebase konfiguráció megtartása
+        // Firebase konfiguráció
         const firebaseConfig = {
             apiKey: "aizasyd8o7xyctxtjlqcm8z-29xtbopbxrybjom",
             authDomain: "teke-eredmenyek.firebaseapp.com",
@@ -199,67 +195,76 @@
         let isDemoMode = false;
         let autoCycleInterval = null;
 
-        // Mintaadatok kizárólag arra az esetre, ha a Firebase adatbázis még üres vagy offline
+        // Előnézeti mintaadatok (ha még nincs élő adat az adatbázisban)
         const DEMO_CATEGORIES = [
             { id: 'ferfi_igazolt', name: 'Férfi Igazolt' },
             { id: 'noi_igazolt', name: 'Női Igazolt' },
             { id: 'amator', name: 'Amatőr Kategória' }
         ];
 
+        function generateDemoPlayers(count, baseScore) {
+            const firstNames = ['Kovács', 'Nagy', 'Szabó', 'Tóth', 'Horváth', 'Varga', 'Kiss', 'Molnár', 'Németh', 'Farkas', 'Balogh', 'Papp', 'Takács', 'Juhász', 'Lakatos', 'Mészáros', 'Oláh', 'Simon', 'Rácz', 'Fekete'];
+            const lastNames = ['János', 'Péter', 'Gábor', 'László', 'Zoltán', 'István', 'Tamás', 'Attila', 'Sándor', 'József', 'Ferenc', 'Tibor', 'Zsolt', 'Csaba', 'András', 'Imre', 'Lajos', 'Gyula', 'Róbert', 'Balázs'];
+            const teams = ['Tiszakécske VSE', 'Szolnoki MÁV', 'Kecskeméti TC', 'Ceglédi VSE', 'Bácsalmási PVSE', 'Ferencvárosi TC', 'Zalaegerszegi TE', 'Szegedi TE', 'Répcelaki SE', 'Kaposvári TK'];
+            const list = [];
+            for (let i = 0; i < count; i++) {
+                const total = Math.max(430, baseScore - i * 4 - (i % 3));
+                const tarol = Math.round(total * 0.34);
+                const teli = total - tarol;
+                const ures = total > 600 ? 0 : (total >= 500 ? (i % 5) + 1 : 6 + (i % 4));
+                list.push({
+                    name: `${firstNames[i % firstNames.length]} ${lastNames[(i * 3) % lastNames.length]}`,
+                    team: teams[i % teams.length],
+                    teli,
+                    tarol,
+                    ures,
+                    total
+                });
+            }
+            return list;
+        }
+
         const DEMO_DATA = {
             ferfi_igazolt: {
                 title: 'KARÁCSONY KUPA 2027. - FÉRFI IGAZOLT',
-                players: [
-                    { name: 'Kovács János', team: 'Tiszakécske VSE', sets: [158, 162, 149, 155], teli: 405, tarol: 219, ures: 0, total: 624 },
-                    { name: 'Nagy Péter', team: 'Szolnoki MÁV', sets: [152, 148, 156, 151], teli: 398, tarol: 209, ures: 1, total: 607 },
-                    { name: 'Szabó Gábor', team: 'Kecskeméti TC', sets: [145, 153, 141, 149], teli: 390, tarol: 198, ures: 2, total: 588 },
-                    { name: 'Tóth László', team: 'Ceglédi VSE', sets: [138, 144, 151, 135], teli: 382, tarol: 186, ures: 4, total: 568 },
-                    { name: 'Horváth Zoltán', team: 'Bácsalmási PVSE', sets: [118, 132, 129, 115], teli: 345, tarol: 149, ures: 7, total: 494 }
-                ]
+                players: generateDemoPlayers(38, 636)
             },
             noi_igazolt: {
                 title: 'KARÁCSONY KUPA 2027. - NŐI IGAZOLT',
-                players: [
-                    { name: 'Kiss Eszter', team: 'Ferencvárosi TC', sets: [154, 149, 158, 151], teli: 396, tarol: 216, ures: 0, total: 612 },
-                    { name: 'Molnár Anna', team: 'Zalaegerszegi TE', sets: [142, 146, 139, 148], teli: 380, tarol: 195, ures: 3, total: 575 }
-                ]
+                players: generateDemoPlayers(22, 618)
             },
             amator: {
                 title: 'KARÁCSONY KUPA 2027. - AMATŐR',
-                players: [
-                    { name: 'Varga Tamás', team: 'Tiszakécske Barátok', sets: [136, 141, 128, 139], teli: 372, tarol: 172, ures: 4, total: 544 },
-                    { name: 'Balogh István', team: 'Kécskei Gurítók', sets: [119, 125, 114, 122], teli: 340, tarol: 140, ures: 6, total: 480 }
-                ]
+                players: generateDemoPlayers(44, 592)
             }
         };
 
-        // Élő óra frissítése másodpercenként
+        // Élő óra
         function updateClock() {
             const now = new Date();
-            const timeStr = now.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            document.getElementById('liveClock').innerText = timeStr;
+            document.getElementById('liveClock').innerText = now.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
         setInterval(updateClock, 1000);
         updateClock();
 
-        // Firebase kapcsolat állapotának figyelése (.info/connected)
+        // Firebase kapcsolat figyelése
         db.ref('.info/connected').on('value', (snap) => {
             const connected = snap.val() === true;
             const dot = document.getElementById('statusDot');
             const text = document.getElementById('statusText');
 
             if (connected) {
-                dot.className = 'w-3 h-3 rounded-full bg-[#00ff66] live-dot inline-block shadow-[0_0_8px_#00ff66]';
-                text.className = 'text-xs sm:text-sm font-bold tracking-wider uppercase text-[#00ff66]';
-                text.innerText = 'ÉLŐ ADATKAPCSOLAT';
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-[#00ff66] live-dot inline-block shadow-[0_0_8px_#00ff66]';
+                text.className = 'text-[11px] sm:text-xs font-bold tracking-wider uppercase text-[#00ff66]';
+                text.innerText = 'ÉLŐ KAPCSOLAT';
             } else {
-                dot.className = 'w-3 h-3 rounded-full bg-[#ff3333] inline-block shadow-[0_0_8px_#ff3333]';
-                text.className = 'text-xs sm:text-sm font-bold tracking-wider uppercase text-[#ff3333]';
-                text.innerText = 'OFFLINE / ÚJRACSATLAKOZÁS...';
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-[#ff3333] inline-block shadow-[0_0_8px_#ff3333]';
+                text.className = 'text-[11px] sm:text-xs font-bold tracking-wider uppercase text-[#ff3333]';
+                text.innerText = 'OFFLINE...';
             }
         });
 
-        // Eredeti Firebase 'karikupa_egyeni' adatfolyam figyelése
+        // Firebase 'karikupa_egyeni' adatfolyam figyelése
         db.ref('karikupa_egyeni').on('value', (snapshot) => {
             const val = snapshot.val();
             const nowStr = new Date().toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -282,19 +287,17 @@
                 renderCategoryTabs();
                 renderCurrentCategory();
             } else if (!hasLiveData) {
-                // Ha üres az adatbázis, felajánljuk a mintaadat gombot
                 document.getElementById('demoToggleBtn').classList.remove('hidden');
                 renderCurrentCategory();
             }
         });
 
-        // Ha 3 másodpercen belül nem érkezik élő adat, automatikusan megmutatjuk az előnézeti módot,
-        // hogy a kijelző azonnal tesztelhető legyen (amint élő adat érkezik, azonnal felülírja)
+        // 2,5 másodperc után előnézeti mód, ha még nincs élő adat
         setTimeout(() => {
             if (!hasLiveData && categories.length === 0) {
                 enableDemoMode();
             }
-        }, 3000);
+        }, 2500);
 
         function enableDemoMode() {
             if (hasLiveData) return;
@@ -305,7 +308,7 @@
             document.getElementById('demoBanner').classList.remove('hidden');
             const btn = document.getElementById('demoToggleBtn');
             btn.classList.remove('hidden');
-            btn.innerText = 'Mintaadatok: BE';
+            btn.innerText = 'Minta: BE';
             renderCategoryTabs();
             renderCurrentCategory();
         }
@@ -318,177 +321,4 @@
                 categories = DEMO_CATEGORIES;
                 categoriesData = DEMO_DATA;
                 activeCatId = categories[0].id;
-                document.getElementById('demoBanner').classList.remove('hidden');
-                btn.innerText = 'Mintaadatok: BE';
-            } else {
-                categories = [];
-                categoriesData = {};
-                activeCatId = '';
-                document.getElementById('demoBanner').classList.add('hidden');
-                btn.innerText = 'Mintaadatok: KI';
-            }
-            renderCategoryTabs();
-            renderCurrentCategory();
-        }
-
-        // Automatikus kategóriaváltás kivetítő módhoz (15 mp)
-        function toggleAutoCycle() {
-            const label = document.getElementById('autoCycleLabel');
-            const btn = document.getElementById('autoCycleBtn');
-            if (autoCycleInterval) {
-                clearInterval(autoCycleInterval);
-                autoCycleInterval = null;
-                label.innerText = 'Auto-váltás: KI';
-                btn.classList.remove('border-[#00ff66]', 'bg-[#003d8f]');
-            } else {
-                label.innerText = 'Auto-váltás: BE (15s)';
-                btn.classList.add('border-[#00ff66]', 'bg-[#003d8f]');
-                autoCycleInterval = setInterval(() => {
-                    if (categories.length > 1) {
-                        const idx = categories.findIndex(c => c.id === activeCatId);
-                        const nextIdx = (idx + 1) % categories.length;
-                        switchCategory(categories[nextIdx].id);
-                    }
-                }, 15000);
-            }
-        }
-
-        // Teljes képernyő kapcsoló
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(() => {});
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen().catch(() => {});
-                }
-            }
-        }
-
-        // Kategória fülek kirajzolása (eredeti logika megtartása)
-        function renderCategoryTabs() {
-            const container = document.getElementById('tabsContainer');
-            container.innerHTML = '';
-            categories.forEach(cat => {
-                const btn = document.createElement('button');
-                const isActive = cat.id === activeCatId;
-                btn.className = isActive
-                    ? 'bg-[#0055ff] text-[#ffff00] border-2 border-[#ffff00] px-5 py-2.5 font-extrabold rounded-xl cursor-pointer text-base sm:text-lg shadow-[0_0_15px_rgba(0,85,255,0.65)] transition transform scale-[1.02]'
-                    : 'bg-[#002b66] hover:bg-[#003d8f] text-white border border-[#0044aa] px-5 py-2.5 font-bold rounded-xl cursor-pointer text-base sm:text-lg transition';
-                btn.innerText = cat.name;
-                btn.onclick = () => switchCategory(cat.id);
-                container.appendChild(btn);
-            });
-        }
-
-        function switchCategory(catId) {
-            activeCatId = catId;
-            renderCategoryTabs();
-            renderCurrentCategory();
-        }
-
-        // Eredeti színezési szabályok (100%-ban azonos küszöbértékek)
-        function getSetColorClass(val) {
-            if (val === 0) return '';
-            if (val > 150) return 'color-green';
-            if (val < 120) return 'color-red';
-            return 'color-yellow';
-        }
-
-        function getTotalColorClass(val) {
-            if (val === 0) return '';
-            if (val > 600) return 'color-green';
-            if (val < 500) return 'color-red';
-            return 'color-yellow';
-        }
-
-        function getUresColorClass(val) {
-            if (val === 0) return 'color-green';
-            if (val <= 5) return 'color-yellow';
-            return 'color-red';
-        }
-
-        // Aktuális kategória ranglistájának kirajzolása (eredeti rendezési és holtverseny-logika)
-        function renderCurrentCategory() {
-            const cat = categoriesData[activeCatId] || { title: 'KARÁCSONY KUPA 2027.', players: [] };
-            document.getElementById('boardTitle').innerText = (cat.title || 'KARÁCSONY KUPA 2027.').toUpperCase();
-
-            // Firebase objektum vagy tömb biztonságos kezelése
-            const rawPlayers = cat.players ? (Array.isArray(cat.players) ? cat.players : Object.values(cat.players)) : [];
-            
-            // Eredeti rendezési logika: Össz (csökkenő) -> Tarol (csökkenő) -> Üres (növekvő)
-            const sorted = [...rawPlayers].sort((a, b) => {
-                if ((b.total || 0) !== (a.total || 0)) return (b.total || 0) - (a.total || 0);
-                if ((b.tarol || 0) !== (a.tarol || 0)) return (b.tarol || 0) - (a.tarol || 0);
-                if ((a.ures || 0) !== (b.ures || 0)) return (a.ures || 0) - (b.ures || 0);
-                return 0;
-            });
-
-            const subtitle = document.getElementById('playerCountSubtitle');
-            subtitle.innerText = sorted.length > 0 
-                ? `Indulók száma: ${sorted.length} fő` 
-                : 'Nincs rögzített eredmény ebben a kategóriában';
-
-            const body = document.getElementById('boardBody');
-            body.innerHTML = '';
-
-            if (sorted.length === 0) {
-                body.innerHTML = `
-                    <tr>
-                        <td colspan="11" class="py-12 text-center text-blue-300/70 font-semibold text-lg">
-                            Még nem érkeztek eredmények ehhez a kategóriához...
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            let currentRank = 1;
-
-            sorted.forEach((player, index) => {
-                // Eredeti holtverseny-kezelés
-                if (index > 0) {
-                    const prev = sorted[index - 1];
-                    if ((player.total || 0) !== (prev.total || 0) || 
-                        (player.tarol || 0) !== (prev.tarol || 0) || 
-                        (player.ures || 0) !== (prev.ures || 0)) {
-                        currentRank = index + 1;
-                    }
-                }
-
-                const tr = document.createElement('tr');
-                const isTop3 = currentRank <= 3 && (player.total || 0) > 0;
-                tr.className = isTop3 
-                    ? 'top3 transition-colors hover:bg-[#003380]/60' 
-                    : 'transition-colors hover:bg-[#002b66]/60';
-
-                const setsArray = Array.isArray(player.sets) ? player.sets : [0, 0, 0, 0];
-                const setsHTML = [0, 1, 2, 3].map(i => {
-                    const s = Number(setsArray[i] || 0);
-                    return s === 0 
-                        ? `<td class="py-3 px-2 text-center font-mono-score text-slate-500">-</td>` 
-                        : `<td class="py-3 px-2 text-center font-mono-score ${getSetColorClass(s)}">${s}</td>`;
-                }).join('');
-
-                // Dobogós helyezés jelvény
-                let rankDisplay = `${currentRank}.`;
-                let rankClass = 'text-white';
-                if (isTop3) {
-                    rankClass = 'text-[#ffff00] text-xl sm:text-2xl font-black drop-shadow-[0_0_6px_rgba(255,255,0,0.5)]';
-                }
-
-                tr.innerHTML = `
-                    <td class="py-3 px-2 text-center font-mono-score ${rankClass}">${rankDisplay}</td>
-                    <td class="py-3 px-3 text-left text-[#ffff00] font-extrabold truncate max-w-[240px]">${player.name || '-'}</td>
-                    <td class="py-3 px-3 text-left text-[#00ff66] font-semibold text-sm sm:text-base lg:text-lg truncate max-w-[210px]">${player.team || '-'}</td>
-                    ${setsHTML}
-                    <td class="py-3 px-2 text-center font-mono-score text-[#9ba3af]">${player.teli || 0}</td>
-                    <td class="py-3 px-2 text-center font-mono-score text-[#9ba3af]">${player.tarol || 0}</td>
-                    <td class="py-3 px-2 text-center font-mono-score ${getUresColorClass(player.ures || 0)}">${player.ures || 0}</td>
-                    <td class="py-3 px-3 text-center font-mono-score font-black text-xl sm:text-2xl lg:text-[1.65rem] ${getTotalColorClass(player.total || 0)}">${player.total || 0}</td>
-                `;
-                body.appendChild(tr);
-            });
-        }
-    </script>
-</body>
-</html>
+                document.getElementById('demoBanner').
